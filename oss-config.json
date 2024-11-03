@@ -1,0 +1,8 @@
+{
+  "OSS": {
+    "access_key_id": "",
+    "access_key_secret": "",
+    "bucket_name": "bucket-okest",
+    "endpoint": "http://oss-cn-beijing.aliyuncs.com"
+  }
+}
