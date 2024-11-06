@@ -5,3 +5,5 @@ To install python virtual environment:
 	sudo apt-get install python3-virtualenv
 	virtualenv venv
 	source venv/bin/activate
+To Run web app at background:
+	nohup python app.py &
