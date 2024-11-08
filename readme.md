@@ -21,3 +21,6 @@
 	oss-config.json
 ## 3.3 Run Web App in Background
 	nohup python app.py &
+
+# 3. View Photos Using a Web Browser
+	![alt text](./doc/image.png)
