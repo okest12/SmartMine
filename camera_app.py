@@ -7,11 +7,59 @@ import os
 import numpy as np
 from pathlib import Path
 import json
+import oss2
+
+def create_oss_bucket():
+    # 读取配置文件
+    with open('oss-config.json', 'r') as config_file:
+        config = json.load(config_file)
+
+    # 获取配置信息
+    access_key_id = config['OSS']['access_key_id']
+    access_key_secret = config['OSS']['access_key_secret']
+    bucket_name = config['OSS']['bucket_name']
+    endpoint = config['OSS']['endpoint']
+
+    # 创建 Bucket 对象
+    auth = oss2.Auth(access_key_id, access_key_secret)
+    return oss2.Bucket(auth, endpoint, bucket_name)
+
+def ensure_directory_exists(bucket, directory):
+    """确保目录存在，如果不存在则创建"""
+    if not bucket.object_exists(directory):
+        bucket.put_object(directory, '')
+
+def upload_image(bucket, file_path):
+    """上传图片到指定目录"""
+    # 获取当前日期
+    current_date = datetime.datetime.now().strftime('%Y-%m-%d')
+    directory = f'{current_date}/'
+    
+    # 确保目录存在
+    ensure_directory_exists(bucket, directory)
+    
+    # 构建文件名
+    filename = os.path.basename(file_path)
+    object_key = f'{directory}{filename}'
+    
+    # 上传文件
+    with open(file_path, 'rb') as file:
+        bucket.put_object(object_key, file)
+    
+    print(f'File {file_path} uploaded successfully to {object_key}')
 
 class CameraApp:
     def __init__(self, window, window_title):
         self.window = window
         self.window.title(window_title)
+        
+        self.bucket = create_oss_bucket()
+        
+        # 读取配置文件中的时间列表
+        self.snapshot_times = self.load_config_times('camera-config.json')
+        
+        # 初始化上次保存图像的时间
+        self.last_saved_time = None
         
         self.video_source = 0
         self.vid = None
@@ -37,8 +85,29 @@ class CameraApp:
         self.file_menu.add_command(label="退出", command=window.quit)
         
         self.center_window(800, 600)
-        
         self.window.mainloop()
+
+    def load_config_times(self, config_file):
+        with open(config_file, 'r') as file:
+            config = json.load(file)
+            return config.get("times", [])
+
+    def should_save_image(self, now):
+        current_time = [str(now.hour).zfill(2), str(now.minute).zfill(2)]
+
+        # 检查当前时间是否在配置的时间列表中
+        if current_time in self.snapshot_times:
+            # 检查是否已经是今天同一分钟内保存过图像
+            if self.last_saved_time is None or self.last_saved_time.replace(second=0, microsecond=0) != now.replace(second=0, microsecond=0):
+                self.last_saved_time = now
+                return True
+        return False
+
+    def save_and_upload_image(self, now, frame):
+        filename = now.strftime("%Y%m%d_%H%M%S") + ".jpg"
+        cv2.imwrite(filename, frame)
+        upload_image(self.bucket, filename)
+        print(f"Image saved to {filename}")
 
     def center_window(self, width, height):
         # 获取屏幕宽度和高度
@@ -98,7 +167,11 @@ class CameraApp:
             
             self.photo = ImageTk.PhotoImage(image=Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)))
             self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
-        
+
+            # 判断是否需要保存图像
+            now = datetime.datetime.now()
+            if self.should_save_image(now):
+                self.save_and_upload_image(now, frame)
         self.window.after(10, self.update_camera, names)
 
     def prompt_for_name(self):
