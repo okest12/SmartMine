@@ -23,4 +23,4 @@
 	nohup python app.py &
 
 # 3. View Photos Using a Web Browser
-	![alt text](./doc/image.png)
+![](./doc/image.png)
