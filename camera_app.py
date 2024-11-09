@@ -61,7 +61,7 @@ class CameraApp:
         # 初始化上次保存图像的时间
         self.last_saved_time = None
         
-        self.video_source = 0
+        self.video_source = self.load_config_video_source('camera-config.json')
         self.vid = None
         
         self.canvas = tk.Canvas(window, width=640, height=480)
@@ -91,6 +91,12 @@ class CameraApp:
         with open(config_file, 'r') as file:
             config = json.load(file)
             return config.get("times", [])
+
+    def load_config_video_source(self, config_file):
+        with open(config_file, 'r') as file:
+            config = json.load(file)
+            source = config['video_source']
+            return int(source) if source.isdigit() else source
 
     def should_save_image(self, now):
         current_time = [str(now.hour).zfill(2), str(now.minute).zfill(2)]
