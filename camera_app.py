@@ -95,6 +95,7 @@ class CameraApp:
     def load_config_video_source(self, config_file):
         with open(config_file, 'r') as file:
             config = json.load(file)
+            # video_source: 视频源，"0" 表示默认摄像头, 网络摄像头格式如："rtmp://58.200.131.2:1935/livetv/hunantv"
             source = config['video_source']
             return int(source) if source.isdigit() else source
 
